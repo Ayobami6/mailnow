@@ -1,0 +1,18 @@
+[
+{"table_name": "django_migrations"},
+{"table_name": "django_content_type"},
+{"table_name": "auth_permission"},
+{"table_name": "auth_group"},
+{"table_name": "auth_group_permissions"},
+{"table_name": "users"},
+{"table_name": "users_groups"},
+{"table_name": "users_user_permissions"},
+{"table_name": "users_company"},
+{"table_name": "users_industry"},
+{"table_name": "api_keys"},
+{"table_name": "team_members"},
+{"table_name": "authtoken_token"},
+{"table_name": "django_admin_log"},
+{"table_name": "core_webhook"},
+{"table_name": "django_session"},
+{"table_name": "core_emaillog"}]

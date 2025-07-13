@@ -38,3 +38,9 @@ class Roles(EnumBase):
     OWNER = "Owner"
     ADMIN = "Admin"
     MEMBER = "Member"
+
+
+class EmailStatus(EnumBase):
+    FAILED = "Failed"
+    SUCCESS = "Success"
+    PENDING = "Pending"
