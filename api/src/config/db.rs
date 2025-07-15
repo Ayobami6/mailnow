@@ -6,8 +6,8 @@ use diesel::r2d2::{ConnectionManager, Pool};
 pub type DBPool = Pool<ConnectionManager<PgConnection>>;
 
 pub fn connect_db(db_url: &str) -> DBPool {
-    let manager: DBPool = ConnectionManager::<PgConnection>::new(db_url);
+    let manager = ConnectionManager::<PgConnection>::new(db_url);
     Pool::builder()
         .build(manager)
-        .expect("Failed to create pool.")
+        .expect("Failed to create pool. 🚨")
 }

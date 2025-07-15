@@ -9,10 +9,12 @@ pub fn get_env(key: &str, fallback: &str) -> String {
 }
 
 // create a reponse Object
+// lets derive some traits for serialization and deserialization
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Response {
     pub status_code: i16,
     pub message: String,
-    pub success: Boolean,
+    pub success: bool,
     pub data: Option<serde_json::Value>,
 }
 
@@ -21,13 +23,13 @@ pub struct Response {
 impl Response {
     pub fn new(
         status_code: i16,
-        message: String,
-        success: Boolean,
+        message: &str,
+        success: bool,
         data: Option<serde_json::Value>,
     ) -> Self {
         Response {
             status_code,
-            message,
+            message: message.to_string(),
             success,
             data,
         }
@@ -48,10 +50,10 @@ impl Response {
 pub fn service_response(
     status_code: i16,
     message: &str,
-    status: Boolean,
+    success: bool,
     data: Option<serde_json::Value>,
 ) -> HttpResponse {
-    let response = Response::new(status, message.to_string(), status_code, data);
+    let response = Response::new(status_code, message, success, data);
 
     match status_code {
         200 => HttpResponse::Ok().json(response.to_json()),
