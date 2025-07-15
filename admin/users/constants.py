@@ -18,7 +18,7 @@ class EnumBase(Enum):
         return [key.value for key in cls]
 
 
-class APIKeyPermissions(EnumBase):
+class APIKeyPermission(EnumBase):
     """API Key Permissions"""
 
     FULL_ACCESS = "Full Access"

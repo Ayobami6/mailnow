@@ -11,7 +11,7 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from sparky_utils.decorators import str_meta
-from .constants import Roles
+from .constants import Roles, APIKeyPermission
 
 # Create your models here.
 
@@ -35,6 +35,12 @@ class CustomUserManger(BaseUserManager):
             user.save(using=self._db)
             return user
 
+    def create_superuser(self, email, password=None, **extra_field):
+        """Creates a new super user"""
+        extra_field.setdefault("is_staff", True)
+        extra_field.setdefault("is_superuser", True)
+        return self.create_user(email, password, **extra_field)
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=255, unique=True, db_index=True)
@@ -46,7 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email_verifield = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    objects = BaseUserManager()
+    objects = CustomUserManger()
 
     USERNAME_FIELD = "email"
 
@@ -95,6 +101,13 @@ class APIKey(models.Model):
     last_used = models.DateTimeField(blank=True, null=True)
     expires_at = models.DateTimeField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    permission = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        choices=APIKeyPermission.choices(),
+        default=APIKeyPermission.FULL_ACCESS.value,
+    )
 
     def __str__(self):
         return self.api_key

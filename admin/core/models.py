@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from users.constants import Status, APIKeyPermissions, EmailStatus
+from users.constants import Status, EmailStatus
 from users.models import Company
 
 # Create your models here.
@@ -22,12 +22,6 @@ class Webhook(models.Model):
         null=True,
         choices=Status.choices(),
         default=Status.ACTIVE.value,
-    )
-    permission = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        choices=APIKeyPermissions.choices(),
     )
 
     def __str__(self):
