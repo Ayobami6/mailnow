@@ -44,7 +44,7 @@ pub struct Company {
 }
 
 #[derive(Queryable, Identifiable, Associations)]
-#[diesel(belongs_to(Company))]
+#[belongs_to(Company, foreign_key = "company_id")]
 #[diesel(table_name = api_keys)]
 pub struct ApiKey {
     pub id: i64,
