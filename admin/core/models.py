@@ -27,6 +27,11 @@ class Webhook(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        db_table = "webhooks"
+        verbose_name = "Webhook"
+        verbose_name_plural = "Webhooks"
+
 
 class EmailLog(models.Model):
     from_email = models.CharField(max_length=200)
@@ -45,3 +50,8 @@ class EmailLog(models.Model):
 
     def __str__(self):
         return f"{self.from_email} -> {self.to_email} : {self.subject[:50]} 📧"
+
+    class Meta:
+        db_table = "email_log"
+        verbose_name = "Email Log"
+        verbose_name_plural = "Email Logs"

@@ -80,6 +80,11 @@ class Industry(models.Model):
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
 
+    class Meta:
+        db_table = "industries"
+        verbose_name = "Industry"
+        verbose_name_plural = "Industries"
+
 
 @str_meta
 class Company(models.Model):
@@ -91,6 +96,11 @@ class Company(models.Model):
     default_from_name = models.CharField(max_length=255, blank=True, null=True)
     default_from_email = models.EmailField(blank=True, null=True)
     industry = models.ForeignKey(Industry, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        db_table = "companies"
+        verbose_name = "Company"
+        verbose_name_plural = "Companies"
 
 
 class APIKey(models.Model):

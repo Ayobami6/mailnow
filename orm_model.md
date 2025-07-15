@@ -1,68 +1,71 @@
-Below is the equivalent Rust ORM (*Diesel*) model for your SQL schema.
+Sure! Let's transform your SQL schema to a [Diesel](https://diesel.rs/) ORM model in Rust.
 
-**Key points:**
-- In Diesel, the field types should map closely to SQL. 
-- Use chrono for `Timestamp` with time zone.
-- Nullable fields use Option.
-- Snake_case recommended, but you can specify custom DB column names with `#[diesel(column_name = "...")]` if you want to keep casing.
+First, let’s define the schema in Diesel’s DSL (`schema.rs`) style, and then the struct (model) that maps to it.
 
-### 1. Diesel Table Macro
-
-First, in your `schema.rs`:
+## Diesel `schema.rs`
 
 ```rust
-// schema.rs
-
-diesel::table! {
-    users (id) {
+table! {
+    api_keys (id) {
         id -> BigInt,
-        password -> Varchar,
-        last_login -> Nullable<Timestamptz>,
-        is_superuser -> Bool,
-        email -> Varchar,
-        firstname -> Nullable<Varchar>,
-        lastname -> Nullable<Varchar>,
+        name -> Varchar,
+        api_key -> Varchar,
+        created_at -> Timestamptz,
+        last_used -> Nullable<Timestamptz>,
+        expires_at -> Nullable<Timestamptz>,
         is_active -> Bool,
-        is_staff -> Bool,
-        mfa_enabled -> Bool,
-        email_verifield -> Bool,
-        date_joined -> Timestamptz,
+        company_id -> BigInt,
+        permission -> Nullable<Varchar>,
     }
 }
+
+table! {
+    companies (id) {
+        id -> BigInt,
+        // ... other fields (define as needed)
+    }
+}
+
+joinable!(api_keys -> companies (company_id));
+
+allow_tables_to_appear_in_same_query!(api_keys, companies);
 ```
 
-### 2. The Model Struct
+## Model Struct
 
 ```rust
-// models.rs
-
-use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use diesel::sql_types::{BigInt, Varchar, Timestamptz, Bool};
+use chrono::{DateTime, Utc};
 
-#[derive(Debug, Queryable, Identifiable, Insertable)]
-#[diesel(table_name = users)]
-pub struct User {
+#[derive(Queryable, Identifiable, Associations)]
+#[diesel(belongs_to(Company))]
+#[table_name = "api_keys"]
+pub struct ApiKey {
     pub id: i64,
-    pub password: String,
-    pub last_login: Option<DateTime<Utc>>,
-    pub is_superuser: bool,
-    pub email: String,
-    pub firstname: Option<String>,
-    pub lastname: Option<String>,
+    pub name: String,
+    pub api_key: String,
+    pub created_at: DateTime<Utc>,
+    pub last_used: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
     pub is_active: bool,
-    pub is_staff: bool,
-    pub mfa_enabled: bool,
-    pub email_verifield: bool,
-    pub date_joined: DateTime<Utc>,
+    pub company_id: i64,
+    pub permission: Option<String>,
+}
+
+#[derive(Queryable, Identifiable)]
+#[table_name = "companies"]
+pub struct Company {
+    pub id: i64,
+    // ... other fields
 }
 ```
 
-### 3. Notes
+### Notes
 
-- Make sure you add `chrono = { version = "0.4", features = ["serde"] }` and `diesel` with `postgres` enabled to your `Cargo.toml`.
-- `Timestamptz` = `chrono::DateTime<Utc>`
-- The struct field names should match the table columns or use #[diesel(column_name = "...")] for custom names.
+- Use `chrono::DateTime<Utc>` for `timestamp with time zone` columns in Diesel/Rust.
+- Nullable columns are represented as `Option<T>`
+- The field names and struct field types directly correspond to table columns.
+- If you want to insert, use `Insertable` as well.
 
----
-
-Let me know if you also want an `Insertable` struct, or if you have additional columns or relations to model!
+Let me know if you’d like a full `Insertable` struct, or if the companies table should be more fully declared!

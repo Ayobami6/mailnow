@@ -1,16 +1,14 @@
-CREATE TABLE users (
+CREATE TABLE api_keys (
     id bigint NOT NULL,
-    password character varying NOT NULL,
-    last_login timestamp with time zone NULL,
-    is_superuser boolean NOT NULL,
-    email character varying NOT NULL,
-    firstname character varying NULL,
-    lastname character varying NULL,
+    name character varying NOT NULL,
+    api_key character varying NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    last_used timestamp with time zone NULL,
+    expires_at timestamp with time zone NULL,
     is_active boolean NOT NULL,
-    is_staff boolean NOT NULL,
-    mfa_enabled boolean NOT NULL,
-    email_verifield boolean NOT NULL,
-    date_joined timestamp with time zone NOT NULL,
+    company_id bigint NOT NULL,
+    permission character varying NULL,
+    CONSTRAINT api_keys_company_id_8e87fa92_fk_users_company_id FOREIGN KEY (company_id) REFERENCES companies(id),
     PRIMARY KEY (id)
 );
 

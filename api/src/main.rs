@@ -1,4 +1,6 @@
 mod config;
+mod models;
+mod schema;
 mod utils;
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, web, App, HttpServer, Responder};
