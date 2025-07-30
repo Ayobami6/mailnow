@@ -1,4 +1,4 @@
-use crate::schema::{api_keys, companies, industries, users};
+use crate::schema::{api_keys, companies, industries, users, team_members};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
@@ -56,4 +56,19 @@ pub struct ApiKey {
     pub is_active: bool,
     pub company_id: i64,
     pub permission: Option<String>,
+}
+
+
+
+
+
+#[derive(Debug, Queryable, Insertable)]
+#[table_name = "team_members"]
+pub struct TeamMember {
+    pub id: i64,
+    pub role: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub company_id: i64,
+    pub user_id: i64,
 }

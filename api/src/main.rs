@@ -1,4 +1,5 @@
 mod config;
+mod dto;
 mod models;
 mod schema;
 mod utils;

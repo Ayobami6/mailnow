@@ -203,7 +203,7 @@ diesel::table! {
         is_active -> Bool,
         last_delivered -> Nullable<Timestamptz>,
         success_rate -> Nullable<Float8>,
-        events -> Nullable<Array<Nullable<Text>>>,
+        events -> Nullable<Array<Nullable<Varchar>>>,
         #[max_length = 255]
         status -> Nullable<Varchar>,
         company_id -> Int8,
