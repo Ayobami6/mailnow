@@ -66,6 +66,9 @@ pub struct Company {
     pub default_from_email: Option<String>,
     pub owner_id: i64,
     pub industry_id: Option<i64>,
+    pub pricing_tier: String,
+    pub api_credits: i64,
+    pub credits_reset_date: DateTime<Utc>,
 }
 
 #[derive(Debug, Insertable)]
@@ -79,6 +82,9 @@ pub struct NewCompany {
     pub default_from_email: Option<String>,
     pub owner_id: i64,
     pub industry_id: Option<i64>,
+    pub pricing_tier: String,
+    pub api_credits: i64,
+    pub credits_reset_date: DateTime<Utc>,
 }
 
 #[derive(Debug, Queryable, Identifiable, Associations, Serialize, Deserialize)]

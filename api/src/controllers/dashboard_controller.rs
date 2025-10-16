@@ -9,6 +9,9 @@ pub struct DashboardStats {
     pub delivery_rate: f64,
     pub api_calls: i64,
     pub active_users: i64,
+    pub api_credits_remaining: i64,
+    pub pricing_tier: String,
+    pub credits_reset_date: String,
 }
 
 #[derive(Serialize)]
@@ -28,12 +31,29 @@ pub struct SystemStatus {
 pub struct DashboardController;
 
 impl DashboardController {
-    pub async fn get_stats() -> Result<HttpResponse, AppError> {
+    pub async fn get_stats(
+        company_id: web::Path<i64>,
+        repo_factory: web::Data<crate::repositories::RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
+        use crate::middleware::credits::check_and_reset_credits;
+        
+        let company_id = company_id.into_inner();
+        
+        // Check and reset credits if needed
+        check_and_reset_credits(company_id, &repo_factory).await?;
+        
+        let user_repo = repo_factory.create_user_repository();
+        let company = user_repo.get_company_by_id(company_id)
+            .map_err(|e| AppError::Database(e))?;
+        
         let stats = DashboardStats {
             emails_sent: 12847,
             delivery_rate: 98.2,
             api_calls: 45231,
             active_users: 2847,
+            api_credits_remaining: company.api_credits,
+            pricing_tier: company.pricing_tier,
+            credits_reset_date: company.credits_reset_date.format("%Y-%m-%d").to_string(),
         };
 
         Ok(service_response(

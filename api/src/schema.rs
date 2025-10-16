@@ -69,6 +69,10 @@ diesel::table! {
         default_from_email -> Nullable<Varchar>,
         owner_id -> Int8,
         industry_id -> Nullable<Int8>,
+        #[max_length = 50]
+        pricing_tier -> Varchar,
+        api_credits -> Int8,
+        credits_reset_date -> Timestamptz,
     }
 }
 

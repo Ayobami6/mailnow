@@ -1,5 +1,5 @@
 use crate::errors::AppError;
-use crate::models::users::{ApiKey, Company, NewApiKey, NewCompany};
+use crate::models::users::{ApiKey, Company, NewApiKey, NewCompany, NewTeamMember};
 use crate::repositories::{users::UserRepository, RepositoryFactory};
 use crate::utils::utils::service_response;
 use actix_web::{web, HttpResponse};
@@ -55,7 +55,13 @@ impl OnboardingController {
             _ => Some(6), // Other
         };
 
-        // Create company
+        // Create company with free tier and initial credits
+        use crate::utils::pricing::{PricingTier, get_next_reset_date};
+        
+        let pricing_tier = PricingTier::Free;
+        let initial_credits = pricing_tier.monthly_credits();
+        let next_reset = get_next_reset_date();
+        
         let new_company = NewCompany {
             company_name: req.company_name.clone(),
             company_address: None,
@@ -65,6 +71,9 @@ impl OnboardingController {
             default_from_email: Some(req.from_email.clone()),
             owner_id: req.user_id,
             industry_id,
+            pricing_tier: pricing_tier.to_string(),
+            api_credits: initial_credits,
+            credits_reset_date: next_reset,
         };
 
         let company = user_repo.create_company(new_company)?;
@@ -81,6 +90,15 @@ impl OnboardingController {
         };
 
         user_repo.create_api_key(new_api_key)?;
+
+        // Create team member with Owner role
+        let new_team_member = NewTeamMember {
+            role: "Owner".to_string(),
+            company_id: company.id,
+            user_id: req.user_id,
+        };
+
+        user_repo.create_team_member(new_team_member)?;
 
         let response = OnboardingResponse {
             company_id: company.id,

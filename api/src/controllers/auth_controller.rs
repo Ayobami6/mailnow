@@ -179,7 +179,10 @@ impl AuthController {
         }
 
         let token = generate_verification_token();
-        let verification_link = format!("http://localhost:3000/verify-email?token={}", token);
+        let verification_link = format!(
+            "http://localhost:3000/verify-email?token={}",
+            token
+        );
 
         // Get user ID first
         let user_repo = repo_factory.create_user_repository();

@@ -25,6 +25,9 @@ pub trait UserRepository {
     fn get_team_members_by_company(&self, company_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error>;
     fn verify_user_email(&self, email: &str) -> Result<User, diesel::result::Error>;
     fn verify_user_by_id(&self, user_id: i64) -> Result<User, diesel::result::Error>;
+    fn update_company_credits(&self, company_id: i64, credits: i64) -> Result<Company, diesel::result::Error>;
+    fn reset_company_credits(&self, company_id: i64, tier: &str) -> Result<Company, diesel::result::Error>;
+    fn deduct_api_credit(&self, company_id: i64) -> Result<Company, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -244,5 +247,41 @@ impl UserRepository for UserRepositoryImpl {
         }
         
         result
+    }
+
+    fn update_company_credits(&self, company_id: i64, credits: i64) -> Result<Company, diesel::result::Error> {
+        log::debug!("Updating credits for company ID: {} to {}", company_id, credits);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        diesel::update(companies::table.filter(companies::id.eq(company_id)))
+            .set(companies::api_credits.eq(credits))
+            .get_result::<Company>(&mut conn)
+    }
+
+    fn reset_company_credits(&self, company_id: i64, tier: &str) -> Result<Company, diesel::result::Error> {
+        use crate::utils::pricing::{PricingTier, get_next_reset_date};
+        
+        let pricing_tier = PricingTier::from_str(tier);
+        let new_credits = pricing_tier.monthly_credits();
+        let next_reset = get_next_reset_date();
+        
+        log::debug!("Resetting credits for company ID: {} to {} ({})", company_id, new_credits, tier);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        diesel::update(companies::table.filter(companies::id.eq(company_id)))
+            .set((
+                companies::api_credits.eq(new_credits),
+                companies::credits_reset_date.eq(next_reset),
+            ))
+            .get_result::<Company>(&mut conn)
+    }
+
+    fn deduct_api_credit(&self, company_id: i64) -> Result<Company, diesel::result::Error> {
+        log::debug!("Deducting 1 API credit for company ID: {}", company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        diesel::update(companies::table.filter(companies::id.eq(company_id)))
+            .set(companies::api_credits.eq(companies::api_credits - 1))
+            .get_result::<Company>(&mut conn)
     }
 }

@@ -89,6 +89,12 @@ class Industry(models.Model):
 
 @str_meta
 class Company(models.Model):
+    PRICING_TIERS = [
+        ('free', 'Free'),
+        ('developer', 'Developer'),
+        ('enterprise', 'Enterprise'),
+    ]
+    
     owner = models.OneToOneField(User, on_delete=models.CASCADE)
     company_name = models.CharField(max_length=255)
     company_address = models.TextField(blank=True, null=True)
@@ -97,6 +103,9 @@ class Company(models.Model):
     default_from_name = models.CharField(max_length=255, blank=True, null=True)
     default_from_email = models.EmailField(blank=True, null=True)
     industry = models.ForeignKey(Industry, on_delete=models.SET_NULL, null=True)
+    pricing_tier = models.CharField(max_length=50, choices=PRICING_TIERS, default='free')
+    api_credits = models.BigIntegerField(default=20000)
+    credits_reset_date = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = "companies"
