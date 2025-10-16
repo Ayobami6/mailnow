@@ -1,5 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
 use thiserror::Error;
+use crate::utils::utils::service_response;
 
 #[derive(Error, Debug)]
 pub enum AppError {
@@ -35,75 +36,35 @@ impl ResponseError for AppError {
         match self {
             AppError::Database(e) => {
                 log::error!("Database error: {:?}", e);
-                HttpResponse::InternalServerError().json(serde_json::json!({
-                    "status_code": 500,
-                    "message": "Database error occurred",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(500, "Database error occurred", false, None)
             }
             AppError::PasswordHash(e) => {
                 log::error!("Password hash error: {}", e);
-                HttpResponse::InternalServerError().json(serde_json::json!({
-                    "status_code": 500,
-                    "message": "Password processing failed",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(500, "Password processing failed", false, None)
             }
             AppError::Jwt(e) => {
                 log::error!("JWT error: {:?}", e);
-                HttpResponse::Unauthorized().json(serde_json::json!({
-                    "status_code": 401,
-                    "message": "Invalid token",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(401, "Invalid token", false, None)
             }
             AppError::Validation(msg) => {
                 log::warn!("Validation error: {}", msg);
-                HttpResponse::BadRequest().json(serde_json::json!({
-                    "status_code": 400,
-                    "message": msg,
-                    "success": false,
-                    "data": null
-                }))
+                service_response(400, msg, false, None)
             }
             AppError::Unauthorized => {
                 log::warn!("Unauthorized access attempt");
-                HttpResponse::Unauthorized().json(serde_json::json!({
-                    "status_code": 401,
-                    "message": "Authentication failed",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(401, "Authentication failed", false, None)
             }
             AppError::UserNotFound => {
                 log::warn!("User not found");
-                HttpResponse::NotFound().json(serde_json::json!({
-                    "status_code": 404,
-                    "message": "User not found",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(404, "User not found", false, None)
             }
             AppError::UserExists => {
                 log::warn!("User already exists");
-                HttpResponse::Conflict().json(serde_json::json!({
-                    "status_code": 409,
-                    "message": "User already exists",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(409, "User already exists", false, None)
             }
             AppError::Internal => {
                 log::error!("Internal server error");
-                HttpResponse::InternalServerError().json(serde_json::json!({
-                    "status_code": 500,
-                    "message": "Internal server error",
-                    "success": false,
-                    "data": null
-                }))
+                service_response(500, "Internal server error", false, None)
             }
         }
     }

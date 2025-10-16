@@ -1,4 +1,4 @@
-use actix_web::{web, Result};
+use actix_web::{web, HttpResponse};
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use serde::{Deserialize, Serialize};
@@ -6,8 +6,9 @@ use uuid::Uuid;
 
 use crate::auth::jwt::JwtService;
 use crate::errors::AppError;
-use crate::models::users::{NewUser, User};
+use crate::models::users::NewUser;
 use crate::repositories::{users::UserRepository, RepositoryFactory};
+use crate::utils::utils::service_response;
 use std::collections::HashMap;
 
 #[derive(Deserialize)]
@@ -56,7 +57,7 @@ impl AuthController {
     pub async fn signup(
         req: web::Json<SignupRequest>,
         repo_factory: web::Data<RepositoryFactory>,
-    ) -> Result<web::Json<serde_json::Value>, AppError> {
+    ) -> Result<HttpResponse, AppError> {
         if req.email.is_empty() || req.password.is_empty() {
             return Err(AppError::Validation(
                 "Email and password are required".to_string(),
@@ -108,19 +109,19 @@ impl AuthController {
             email_verified: user.email_verified,
         };
 
-        Ok(web::Json(serde_json::json!({
-            "status_code": 201,
-            "message": "User created successfully",
-            "success": true,
-            "data": user_response
-        })))
+        Ok(service_response(
+            201,
+            "User created successfully",
+            true,
+            Some(serde_json::to_value(user_response).unwrap()),
+        ))
     }
 
     pub async fn login(
         req: web::Json<LoginRequest>,
         repo_factory: web::Data<RepositoryFactory>,
         jwt_service: web::Data<JwtService>,
-    ) -> Result<web::Json<serde_json::Value>, AppError> {
+    ) -> Result<HttpResponse, AppError> {
         if req.email.is_empty() || req.password.is_empty() {
             return Err(AppError::Validation(
                 "Email and password are required".to_string(),
@@ -155,17 +156,17 @@ impl AuthController {
             },
         };
 
-        Ok(web::Json(serde_json::json!({
-            "status_code": 200,
-            "message": "Login successful",
-            "success": true,
-            "data": auth_response
-        })))
+        Ok(service_response(
+            200,
+            "Login successful",
+            true,
+            Some(serde_json::to_value(auth_response).unwrap()),
+        ))
     }
 
     pub async fn verify_email_send(
         req: web::Json<VerifyEmailRequest>,
-    ) -> Result<web::Json<serde_json::Value>, AppError> {
+    ) -> Result<HttpResponse, AppError> {
         if req.email.is_empty() {
             return Err(AppError::Validation("Email is required".to_string()));
         }
@@ -175,32 +176,37 @@ impl AuthController {
             "http://localhost:3000/verify-email?token={}&success=true",
             token
         );
+        log::info!(
+            "Verification link for {}: {}",
+            req.email,
+            verification_link
+        );
 
         let response = VerifyEmailResponse {
             message: "Verification email sent successfully".to_string(),
             verification_link,
         };
 
-        Ok(web::Json(serde_json::json!({
-            "status_code": 200,
-            "message": "Verification email sent",
-            "success": true,
-            "data": response
-        })))
+        Ok(service_response(
+            200,
+            "Verification email sent",
+            true,
+            Some(serde_json::to_value(response).unwrap()),
+        ))
     }
 
     pub async fn verify_email_token(
         query: web::Query<HashMap<String, String>>,
-    ) -> Result<web::Json<serde_json::Value>, AppError> {
+    ) -> Result<HttpResponse, AppError> {
         let _token = query
             .get("token")
             .ok_or_else(|| AppError::Validation("Missing token".to_string()))?;
 
-        Ok(web::Json(serde_json::json!({
-            "status_code": 200,
-            "message": "Email verified successfully",
-            "success": true,
-            "data": null
-        })))
+        Ok(service_response(
+            200,
+            "Email verified successfully",
+            true,
+            None,
+        ))
     }
 }
