@@ -103,6 +103,8 @@ pub struct NewApiKey {
     pub api_key: String,
     pub company_id: i64,
     pub permission: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub is_active: bool,
 }
 
 

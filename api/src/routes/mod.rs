@@ -4,3 +4,4 @@ pub mod api_keys_routes;
 pub mod logs_routes;
 pub mod templates_routes;
 pub mod email_routes;
+pub mod onboarding_routes;
