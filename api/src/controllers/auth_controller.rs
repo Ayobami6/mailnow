@@ -3,12 +3,13 @@ use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
+use tokio;
 use crate::auth::jwt::JwtService;
 use crate::errors::AppError;
 use crate::models::users::NewUser;
 use crate::repositories::{users::UserRepository, RepositoryFactory};
-use crate::utils::utils::service_response;
+use crate::services::email_service::EmailService;
+use crate::utils::utils::{get_env, service_response};
 use std::collections::HashMap;
 
 #[derive(Deserialize)]
@@ -176,20 +177,46 @@ impl AuthController {
             "http://localhost:3000/verify-email?token={}&success=true",
             token
         );
-        log::info!(
-            "Verification link for {}: {}",
-            req.email,
-            verification_link
-        );
+
+        let email = req.email.clone();
+        let link = verification_link.clone();
+
+        // Queue background email task
+        tokio::spawn(async move {
+            let email_service = EmailService::new();
+            let smtp_server = get_env("SMTP_HOST", "smtp.gmail.com");
+            let smtp_username = get_env("SMTP_USERNAME", "");
+            let smtp_password = get_env("SMTP_PASSWORD", "");
+            let content = format!("Please click on the link to verify your email: {}", &link);
+
+            let result = email_service
+                .send_email(
+                    &smtp_server,
+                    &smtp_username,
+                    &smtp_password,
+                    &smtp_username,
+                    &email,
+                    "Verify your email",
+                    &content,
+                    false,
+                )
+                .await;
+
+            if let Err(e) = result {
+                log::error!("Failed to send verification email to {}: {:?}", email, e);
+            } else {
+                log::info!("Verification email sent successfully to {}", email);
+            }
+        });
 
         let response = VerifyEmailResponse {
-            message: "Verification email sent successfully".to_string(),
+            message: "Verification email queued successfully".to_string(),
             verification_link,
         };
 
         Ok(service_response(
             200,
-            "Verification email sent",
+            "Verification email queued",
             true,
             Some(serde_json::to_value(response).unwrap()),
         ))

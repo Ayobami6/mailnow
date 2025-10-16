@@ -8,6 +8,7 @@ mod repositories;
 mod routes;
 mod schema;
 mod utils;
+mod services;
 
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, web, App, HttpServer, Responder};
