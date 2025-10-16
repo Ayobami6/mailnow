@@ -93,6 +93,9 @@ impl AuthController {
             is_active: true,
             is_staff: false,
             is_superuser: false,
+            mfa_enabled: false,
+            email_verified: false,
+            date_joined: chrono::Utc::now(),
         };
 
         let user = user_repo.create_user(new_user)?;

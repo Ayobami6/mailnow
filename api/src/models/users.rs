@@ -32,6 +32,9 @@ pub struct NewUser {
     pub is_active: bool,
     pub is_staff: bool,
     pub is_superuser: bool,
+    pub mfa_enabled: bool,
+    pub email_verified: bool,
+    pub date_joined: DateTime<Utc>,
 }
 
 #[derive(Debug, Queryable, Identifiable, Serialize, Deserialize)]
