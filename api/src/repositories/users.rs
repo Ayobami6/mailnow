@@ -23,6 +23,8 @@ pub trait UserRepository {
     
     fn create_team_member(&self, new_member: NewTeamMember) -> Result<TeamMember, diesel::result::Error>;
     fn get_team_members_by_company(&self, company_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error>;
+    fn verify_user_email(&self, email: &str) -> Result<User, diesel::result::Error>;
+    fn verify_user_by_id(&self, user_id: i64) -> Result<User, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -210,5 +212,37 @@ impl UserRepository for UserRepositoryImpl {
         team_members::table
             .filter(team_members::company_id.eq(company_id))
             .load::<TeamMember>(&mut conn)
+    }
+
+    fn verify_user_email(&self, email: &str) -> Result<User, diesel::result::Error> {
+        log::debug!("Verifying email for user: {}", email);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        let result = diesel::update(users::table.filter(users::email.eq(email)))
+            .set(users::email_verified.eq(true))
+            .get_result::<User>(&mut conn);
+            
+        match &result {
+            Ok(user) => log::info!("Email verified successfully for user: {} (ID: {})", email, user.id),
+            Err(e) => log::error!("Failed to verify email for {}: {:?}", email, e),
+        }
+        
+        result
+    }
+
+    fn verify_user_by_id(&self, user_id: i64) -> Result<User, diesel::result::Error> {
+        log::debug!("Verifying email for user ID: {}", user_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        let result = diesel::update(users::table.filter(users::id.eq(user_id)))
+            .set(users::email_verified.eq(true))
+            .get_result::<User>(&mut conn);
+            
+        match &result {
+            Ok(user) => log::info!("Email verified successfully for user ID: {} ({})", user_id, user.email),
+            Err(e) => log::error!("Failed to verify email for user ID {}: {:?}", user_id, e),
+        }
+        
+        result
     }
 }

@@ -1,17 +1,21 @@
-use actix_web::{web, HttpResponse};
-use argon2::password_hash::{rand_core::OsRng, SaltString};
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use tokio;
 use crate::auth::jwt::JwtService;
 use crate::errors::AppError;
 use crate::models::users::NewUser;
 use crate::repositories::{users::UserRepository, RepositoryFactory};
 use crate::services::email_service::EmailService;
-use crate::utils::utils::{get_env, service_response};
+use crate::utils::redis_verification::{
+    generate_verification_token, get_user_id_from_token, remove_verification_token,
+    store_verification_token,
+};
 use crate::utils::template::load_template;
+use crate::utils::utils::{get_env, service_response};
+use actix_web::{web, HttpResponse};
+use argon2::password_hash::{rand_core::OsRng, SaltString};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tokio;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct SignupRequest {
@@ -168,16 +172,31 @@ impl AuthController {
 
     pub async fn verify_email_send(
         req: web::Json<VerifyEmailRequest>,
+        repo_factory: web::Data<RepositoryFactory>,
     ) -> Result<HttpResponse, AppError> {
         if req.email.is_empty() {
             return Err(AppError::Validation("Email is required".to_string()));
         }
 
-        let token = Uuid::new_v4().to_string();
-        let verification_link = format!(
-            "http://localhost:3000/verify-email?token={}&success=true",
-            token
-        );
+        let token = generate_verification_token();
+        let verification_link = format!("http://localhost:3000/verify-email?token={}", token);
+
+        // Get user ID first
+        let user_repo = repo_factory.create_user_repository();
+        let user = user_repo
+            .get_user_by_email(&req.email)
+            .map_err(|e| match e {
+                diesel::result::Error::NotFound => {
+                    AppError::Validation("User not found".to_string())
+                }
+                _ => AppError::Database(e),
+            })?;
+
+        // Store verification token in Redis
+        if let Err(e) = store_verification_token(user.id, &token).await {
+            log::error!("Failed to store verification token: {:?}", e);
+            return Err(AppError::Internal);
+        }
 
         let email = req.email.clone();
         let link = verification_link.clone();
@@ -190,7 +209,7 @@ impl AuthController {
             let smtp_password = get_env("SMTP_PASSWORD", "");
             let mut template_vars = HashMap::new();
             template_vars.insert("verification_link", link.as_str());
-            
+
             let html_content = match load_template("verify_email", template_vars) {
                 Ok(content) => content,
                 Err(e) => {
@@ -234,16 +253,46 @@ impl AuthController {
 
     pub async fn verify_email_token(
         query: web::Query<HashMap<String, String>>,
+        repo_factory: web::Data<RepositoryFactory>,
     ) -> Result<HttpResponse, AppError> {
-        let _token = query
+        let token = query
             .get("token")
             .ok_or_else(|| AppError::Validation("Missing token".to_string()))?;
+
+        // Get user ID from Redis token
+        let user_id = get_user_id_from_token(token)
+            .await
+            .map_err(|e| {
+                log::error!("Redis error: {:?}", e);
+                AppError::Internal
+            })?
+            .ok_or_else(|| AppError::Validation("Invalid or expired token".to_string()))?;
+
+        // Update user email verification status
+        let user_repo = repo_factory.create_user_repository();
+        let user = user_repo.verify_user_by_id(user_id).map_err(|e| match e {
+            diesel::result::Error::NotFound => AppError::Validation("User not found".to_string()),
+            _ => AppError::Database(e),
+        })?;
+
+        // Remove used token from Redis
+        if let Err(e) = remove_verification_token(token).await {
+            log::error!("Failed to remove verification token: {:?}", e);
+        }
+
+        let user_response = UserResponse {
+            id: user.id,
+            email: user.email,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            email_verified: user.email_verified,
+        };
 
         Ok(service_response(
             200,
             "Email verified successfully",
             true,
-            None,
+            Some(serde_json::to_value(user_response).unwrap()),
         ))
     }
 }
