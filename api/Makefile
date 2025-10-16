@@ -3,7 +3,7 @@ install:
 	@cargo install --path .
 
 watch:
-	@cargo watch -x run
+	@cargo-watch -x run
 
 build:
 	@cargo build

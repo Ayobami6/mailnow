@@ -29,6 +29,9 @@ pub struct NewUser {
     pub firstname: Option<String>,
     pub lastname: Option<String>,
     pub user_type: String,
+    pub is_active: bool,
+    pub is_staff: bool,
+    pub is_superuser: bool,
 }
 
 #[derive(Debug, Queryable, Identifiable, Serialize, Deserialize)]
