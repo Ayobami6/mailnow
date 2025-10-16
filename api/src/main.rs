@@ -99,13 +99,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
-            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_headers(vec![
-                http::header::CONTENT_TYPE,
-                http::header::AUTHORIZATION,
-                http::header::ACCEPT,
-            ])
+            .allow_any_method()
+            .allow_any_header()
             .max_age(3600);
 
         log::debug!("Creating new app instance");
