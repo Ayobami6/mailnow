@@ -2,6 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use crate::utils::utils::service_response;
 use crate::errors::AppError;
+use crate::repositories::users::UserRepository;
 
 #[derive(Serialize)]
 pub struct DashboardStats {
