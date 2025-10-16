@@ -21,6 +21,9 @@ from users.views import (
     RootAPIView,
 )  # Import the RootAPIView from the users app views.py file
 
+# Import admin customization
+from . import admin as admin_config
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", RootAPIView.as_view(), name="root"),  # Root API View# Root API View wi)

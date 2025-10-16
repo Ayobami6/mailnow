@@ -117,7 +117,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    email_log (id) {
+    emaillog (id) {
         id -> Int8,
         #[max_length = 200]
         from_email -> Varchar,
@@ -130,6 +130,39 @@ diesel::table! {
         status -> Nullable<Varchar>,
         created_at -> Timestamptz,
         company_id -> Int8,
+    }
+}
+
+diesel::table! {
+    smtpprofiles (id) {
+        id -> Int8,
+        company_id -> Int8,
+        #[max_length = 255]
+        smtp_username -> Varchar,
+        #[max_length = 255]
+        smtp_password -> Varchar,
+        #[max_length = 255]
+        smtp_server -> Varchar,
+        smtp_port -> Int4,
+        is_default -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    templates (id) {
+        id -> Int8,
+        company_id -> Int8,
+        #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
+        subject -> Varchar,
+        content -> Text,
+        #[max_length = 50]
+        template_type -> Varchar,
+        date_created -> Timestamptz,
+        date_updated -> Timestamptz,
     }
 }
 
@@ -170,7 +203,9 @@ diesel::table! {
         is_active -> Bool,
         is_staff -> Bool,
         mfa_enabled -> Bool,
-        email_verifield -> Bool,
+        email_verified -> Bool,
+        #[max_length = 50]
+        user_type -> Varchar,
         date_joined -> Timestamptz,
     }
 }
@@ -219,7 +254,9 @@ diesel::joinable!(companies -> industries (industry_id));
 diesel::joinable!(companies -> users (owner_id));
 diesel::joinable!(django_admin_log -> django_content_type (content_type_id));
 diesel::joinable!(django_admin_log -> users (user_id));
-diesel::joinable!(email_log -> companies (company_id));
+diesel::joinable!(emaillog -> companies (company_id));
+diesel::joinable!(smtpprofiles -> companies (company_id));
+diesel::joinable!(templates -> companies (company_id));
 diesel::joinable!(team_members -> companies (company_id));
 diesel::joinable!(team_members -> users (user_id));
 diesel::joinable!(users_groups -> auth_group (group_id));
@@ -239,9 +276,11 @@ diesel::allow_tables_to_appear_in_same_query!(
     django_content_type,
     django_migrations,
     django_session,
-    email_log,
+    emaillog,
     industries,
+    smtpprofiles,
     team_members,
+    templates,
     users,
     users_groups,
     users_user_permissions,

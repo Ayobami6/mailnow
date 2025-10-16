@@ -13,7 +13,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from sparky_utils.logger import LoggerConfig
 import logging
+import os
 from utils.utils import get_env
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,12 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-%kbwvpshsxdk*v%yymk!+2#g$5@xyln*pf+fg%zwwk=w&p9obz"
+SECRET_KEY = get_env("SECRET_KEY", "django-insecure-default-key-change-this")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = get_env("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = get_env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # Application definition
@@ -81,16 +86,13 @@ AUTH_USER_MODEL = "users.User"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Database URL parsing
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": get_env("DATABASE_NAME"),
-        "USER": get_env("DATABASE_USER"),
-        "PASSWORD": get_env("DATABASE_PASSWORD"),
-        "HOST": get_env("DATABASE_HOST"),
-        "PORT": get_env("DATABASE_PORT"),
-        "DISABLE_SERVER_SIDE_CURSORS": True,
-    },
+    "default": dj_database_url.parse(
+        get_env("DATABASE_URL", "postgresql://mailnow_user:mailnow_pass@localhost:5432/mailnow_db")
+    )
 }
 
 # Password validation

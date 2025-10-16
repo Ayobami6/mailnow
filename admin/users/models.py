@@ -49,7 +49,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     mfa_enabled = models.BooleanField(default=False)
-    email_verifield = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False)
+    user_type = models.CharField(max_length=50, default='regular')
     date_joined = models.DateTimeField(default=timezone.now)
 
     objects = CustomUserManger()
