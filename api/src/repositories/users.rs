@@ -41,7 +41,7 @@ impl UserRepository for UserRepositoryImpl {
         log::debug!("Creating user with email: {}", new_user.email);
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         
-        let result = diesel::insert_into(users::table)
+        let result: Result<User, diesel::result::Error> = diesel::insert_into(users::table)
             .values(&new_user)
             .get_result(&mut conn);
             
@@ -57,7 +57,7 @@ impl UserRepository for UserRepositoryImpl {
         log::debug!("Fetching user by ID: {}", user_id);
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         
-        let result = users::table.find(user_id).first(&mut conn);
+        let result = users::table.find(user_id).first::<User>(&mut conn);
         
         match &result {
             Ok(_) => log::debug!("User found with ID: {}", user_id),
@@ -74,7 +74,7 @@ impl UserRepository for UserRepositoryImpl {
         
         let result = users::table
             .filter(users::email.eq(email))
-            .first(&mut conn);
+            .first::<User>(&mut conn);
             
         match &result {
             Ok(user) => log::debug!("User found with email: {} (ID: {})", email, user.id),
@@ -98,7 +98,7 @@ impl UserRepository for UserRepositoryImpl {
                 users::email_verified.eq(user.email_verified),
                 users::user_type.eq(&user.user_type),
             ))
-            .get_result(&mut conn);
+            .get_result::<User>(&mut conn);
             
         match &result {
             Ok(_) => log::info!("User updated successfully with ID: {}", user_id),
@@ -134,7 +134,7 @@ impl UserRepository for UserRepositoryImpl {
         
         let result = diesel::insert_into(companies::table)
             .values(&new_company)
-            .get_result(&mut conn);
+            .get_result::<Company>(&mut conn);
             
         match &result {
             Ok(company) => log::info!("Company created successfully with ID: {}", company.id),
@@ -147,7 +147,7 @@ impl UserRepository for UserRepositoryImpl {
     fn get_company_by_id(&self, company_id: i64) -> Result<Company, diesel::result::Error> {
         log::debug!("Fetching company by ID: {}", company_id);
         let mut conn = self.pool.get().expect("Failed to get DB connection");
-        companies::table.find(company_id).first(&mut conn)
+        companies::table.find(company_id).first::<Company>(&mut conn)
     }
 
     fn get_companies_by_owner(&self, owner_id: i64) -> Result<Vec<Company>, diesel::result::Error> {
@@ -155,7 +155,7 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         companies::table
             .filter(companies::owner_id.eq(owner_id))
-            .load(&mut conn)
+            .load::<Company>(&mut conn)
     }
 
     fn create_industry(&self, new_industry: NewIndustry) -> Result<Industry, diesel::result::Error> {
@@ -163,13 +163,13 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         diesel::insert_into(industries::table)
             .values(&new_industry)
-            .get_result(&mut conn)
+            .get_result::<Industry>(&mut conn)
     }
 
     fn get_all_industries(&self) -> Result<Vec<Industry>, diesel::result::Error> {
         log::debug!("Fetching all industries");
         let mut conn = self.pool.get().expect("Failed to get DB connection");
-        industries::table.load(&mut conn)
+        industries::table.load::<Industry>(&mut conn)
     }
 
     fn create_api_key(&self, new_api_key: NewApiKey) -> Result<ApiKey, diesel::result::Error> {
@@ -177,7 +177,7 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         diesel::insert_into(api_keys::table)
             .values(&new_api_key)
-            .get_result(&mut conn)
+            .get_result::<ApiKey>(&mut conn)
     }
 
     fn get_api_keys_by_company(&self, company_id: i64) -> Result<Vec<ApiKey>, diesel::result::Error> {
@@ -185,7 +185,7 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         api_keys::table
             .filter(api_keys::company_id.eq(company_id))
-            .load(&mut conn)
+            .load::<ApiKey>(&mut conn)
     }
 
     fn get_api_key_by_key(&self, key: &str) -> Result<ApiKey, diesel::result::Error> {
@@ -193,7 +193,7 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         api_keys::table
             .filter(api_keys::api_key.eq(key))
-            .first(&mut conn)
+            .first::<ApiKey>(&mut conn)
     }
 
     fn create_team_member(&self, new_member: NewTeamMember) -> Result<TeamMember, diesel::result::Error> {
@@ -201,7 +201,7 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         diesel::insert_into(team_members::table)
             .values(&new_member)
-            .get_result(&mut conn)
+            .get_result::<TeamMember>(&mut conn)
     }
 
     fn get_team_members_by_company(&self, company_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error> {
@@ -209,6 +209,6 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         team_members::table
             .filter(team_members::company_id.eq(company_id))
-            .load(&mut conn)
+            .load::<TeamMember>(&mut conn)
     }
 }
