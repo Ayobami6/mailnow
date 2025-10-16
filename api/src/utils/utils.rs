@@ -66,6 +66,8 @@ pub fn service_response(
         422 => HttpResponse::UnprocessableEntity().json(response.to_json()),
         429 => HttpResponse::TooManyRequests().json(response.to_json()),
         500 => HttpResponse::InternalServerError().json(response.to_json()),
+        409 => HttpResponse::Conflict().json(response.to_json()),
+        503 => HttpResponse::ServiceUnavailable().json(response.to_json()),
         _ => HttpResponse::InternalServerError().json(response.to_json()),
     }
 }
