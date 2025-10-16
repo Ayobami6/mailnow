@@ -119,6 +119,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::new("%a %{User-Agent}i"))
             .service(health)
             .configure(routes::auth_routes::register_auth_routes)
+            .configure(routes::dashboard_routes::register_dashboard_routes)
+            .configure(routes::api_keys_routes::register_api_keys_routes)
+            .configure(routes::logs_routes::register_logs_routes)
+            .configure(routes::templates_routes::register_templates_routes)
+            .configure(routes::email_routes::register_email_routes)
     })
     .bind(("127.0.0.1", port))?
     .run()
