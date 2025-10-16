@@ -10,6 +10,7 @@ use crate::models::users::NewUser;
 use crate::repositories::{users::UserRepository, RepositoryFactory};
 use crate::services::email_service::EmailService;
 use crate::utils::utils::{get_env, service_response};
+use crate::utils::template::load_template;
 use std::collections::HashMap;
 
 #[derive(Deserialize)]
@@ -187,18 +188,27 @@ impl AuthController {
             let smtp_server = get_env("SMTP_HOST", "smtp.gmail.com");
             let smtp_username = get_env("SMTP_USERNAME", "");
             let smtp_password = get_env("SMTP_PASSWORD", "");
-            let content = format!("Please click on the link to verify your email: {}", &link);
+            let mut template_vars = HashMap::new();
+            template_vars.insert("verification_link", link.as_str());
+            
+            let html_content = match load_template("verify_email", template_vars) {
+                Ok(content) => content,
+                Err(e) => {
+                    log::error!("Failed to load email template: {:?}", e);
+                    format!("Please verify your email by clicking this link: {}", &link)
+                }
+            };
 
             let result = email_service
                 .send_email(
                     &smtp_server,
                     &smtp_username,
                     &smtp_password,
-                    &smtp_username,
+                    "MailNow <noreply@mailnow.dev>",
                     &email,
-                    "Verify your email",
-                    &content,
-                    false,
+                    "Verify Your Email Address - MailNow",
+                    &html_content,
+                    true,
                 )
                 .await;
 
