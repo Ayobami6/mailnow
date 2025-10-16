@@ -1,4 +1,4 @@
-use crate::schema::{api_keys, companies, industries, users, team_members};
+use crate::schema::{api_keys, companies, industries, team_members, users};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -113,10 +113,6 @@ pub struct NewApiKey {
     pub is_active: bool,
 }
 
-
-
-
-
 #[derive(Debug, Queryable, Identifiable, Associations, Serialize, Deserialize)]
 #[diesel(table_name = team_members)]
 #[diesel(belongs_to(User, foreign_key = user_id))]
@@ -135,5 +131,7 @@ pub struct TeamMember {
 pub struct NewTeamMember {
     pub role: String,
     pub company_id: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub user_id: i64,
 }

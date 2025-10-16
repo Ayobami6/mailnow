@@ -56,12 +56,12 @@ impl OnboardingController {
         };
 
         // Create company with free tier and initial credits
-        use crate::utils::pricing::{PricingTier, get_next_reset_date};
-        
+        use crate::utils::pricing::{get_next_reset_date, PricingTier};
+
         let pricing_tier = PricingTier::Free;
         let initial_credits = pricing_tier.monthly_credits();
         let next_reset = get_next_reset_date();
-        
+
         let new_company = NewCompany {
             company_name: req.company_name.clone(),
             company_address: None,
@@ -96,6 +96,8 @@ impl OnboardingController {
             role: "Owner".to_string(),
             company_id: company.id,
             user_id: req.user_id,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         };
 
         user_repo.create_team_member(new_team_member)?;
