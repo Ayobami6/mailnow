@@ -123,6 +123,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::email_routes::register_email_routes)
             .configure(routes::onboarding_routes::register_onboarding_routes)
             .configure(routes::team_routes::register_team_routes)
+            .configure(routes::user_routes::register_user_routes)
     })
     .bind(("127.0.0.1", port))?
     .run()

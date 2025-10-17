@@ -6,3 +6,4 @@ pub mod templates_controller;
 pub mod email_controller;
 pub mod onboarding_controller;
 pub mod team_controller;
+pub mod user_controller;

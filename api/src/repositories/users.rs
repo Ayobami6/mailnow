@@ -25,6 +25,7 @@ pub trait UserRepository {
     
     fn create_team_member(&self, new_member: NewTeamMember) -> Result<TeamMember, diesel::result::Error>;
     fn get_team_members_by_company(&self, company_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error>;
+    fn get_team_members_by_user(&self, user_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error>;
     fn verify_user_email(&self, email: &str) -> Result<User, diesel::result::Error>;
     fn verify_user_by_id(&self, user_id: i64) -> Result<User, diesel::result::Error>;
     fn update_company_credits(&self, company_id: i64, credits: i64) -> Result<Company, diesel::result::Error>;
@@ -216,6 +217,14 @@ impl UserRepository for UserRepositoryImpl {
         let mut conn = self.pool.get().expect("Failed to get DB connection");
         team_members::table
             .filter(team_members::company_id.eq(company_id))
+            .load::<TeamMember>(&mut conn)
+    }
+
+    fn get_team_members_by_user(&self, user_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error> {
+        log::debug!("Fetching team memberships for user: {}", user_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        team_members::table
+            .filter(team_members::user_id.eq(user_id))
             .load::<TeamMember>(&mut conn)
     }
 
