@@ -1,30 +1,30 @@
+use crate::utils::utils::service_response;
 use actix_web::{HttpResponse, ResponseError};
 use thiserror::Error;
-use crate::utils::utils::service_response;
 
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] diesel::result::Error),
-    
+
     #[error("Password hashing error: {0}")]
     PasswordHash(String),
-    
+
     #[error("JWT error: {0}")]
     Jwt(#[from] jsonwebtoken::errors::Error),
-    
+
     #[error("Validation error: {0}")]
     Validation(String),
-    
+
     #[error("Authentication failed")]
     Unauthorized,
-    
+
     #[error("User not found")]
     UserNotFound,
-    
+
     #[error("User already exists")]
     UserExists,
-    
+
     #[error("Internal server error")]
     Internal,
 }
@@ -32,7 +32,7 @@ pub enum AppError {
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         log::error!("API Error: {}", self);
-        
+
         match self {
             AppError::Database(e) => {
                 log::error!("Database error: {:?}", e);

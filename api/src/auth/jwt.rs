@@ -54,4 +54,8 @@ impl JwtService {
         )
         .map(|data| data.claims)
     }
+
+    pub fn validate_token(&self, token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+        self.verify_token(token)
+    }
 }

@@ -20,6 +20,8 @@ pub trait UserRepository {
     fn create_api_key(&self, new_api_key: NewApiKey) -> Result<ApiKey, diesel::result::Error>;
     fn get_api_keys_by_company(&self, company_id: i64) -> Result<Vec<ApiKey>, diesel::result::Error>;
     fn get_api_key_by_key(&self, key: &str) -> Result<ApiKey, diesel::result::Error>;
+    fn delete_api_key(&self, api_key_id: i64, company_id: i64) -> Result<usize, diesel::result::Error>;
+    fn get_user_role_in_company(&self, user_id: i64, company_id: i64) -> Result<String, diesel::result::Error>;
     
     fn create_team_member(&self, new_member: NewTeamMember) -> Result<TeamMember, diesel::result::Error>;
     fn get_team_members_by_company(&self, company_id: i64) -> Result<Vec<TeamMember>, diesel::result::Error>;
@@ -283,5 +285,35 @@ impl UserRepository for UserRepositoryImpl {
         diesel::update(companies::table.filter(companies::id.eq(company_id)))
             .set(companies::api_credits.eq(companies::api_credits - 1))
             .get_result::<Company>(&mut conn)
+    }
+
+    fn delete_api_key(&self, api_key_id: i64, company_id: i64) -> Result<usize, diesel::result::Error> {
+        log::debug!("Deleting API key ID: {} for company: {}", api_key_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        diesel::delete(
+            api_keys::table
+                .filter(api_keys::id.eq(api_key_id))
+                .filter(api_keys::company_id.eq(company_id))
+        ).execute(&mut conn)
+    }
+
+    fn get_user_role_in_company(&self, user_id: i64, company_id: i64) -> Result<String, diesel::result::Error> {
+        log::debug!("Getting user role for user: {} in company: {}", user_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        // Check if user is company owner
+        let company = companies::table.find(company_id).first::<Company>(&mut conn)?;
+        if company.owner_id == user_id {
+            return Ok("Owner".to_string());
+        }
+        
+        // Check team member role
+        let team_member = team_members::table
+            .filter(team_members::user_id.eq(user_id))
+            .filter(team_members::company_id.eq(company_id))
+            .first::<TeamMember>(&mut conn)?;
+        
+        Ok(team_member.role)
     }
 }
