@@ -79,7 +79,7 @@ impl PublicEmailController {
             to_email: email_req.to.clone(),
             subject: email_req.subject.clone(),
             body: content.clone(),
-            status: Some("queued".to_string()),
+            status: Some("Queued".to_string()),
             created_at: chrono::Utc::now(),
             company_id: company.id,
         };
@@ -118,10 +118,16 @@ impl PublicEmailController {
 
             // Update email log status
             let user_repo = repo_factory_clone.create_user_repository();
-            let status = if result.is_ok() { "sent" } else { "failed" };
+            let status = if result.is_ok() { "Success" } else { "Failed" };
 
-            // Note: In a real implementation, you'd want to update the email log status
-            // For now, we'll just log the result
+            if let Err(e) = user_repo.update_email_log_status(log_id, status) {
+                log::error!(
+                    "Failed to update email log status for ID {}: {:?}",
+                    log_id,
+                    e
+                );
+            }
+
             if result.is_ok() {
                 log::info!("Email sent successfully for log ID: {}", log_id);
             } else {

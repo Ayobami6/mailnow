@@ -41,6 +41,7 @@ pub trait UserRepository {
     
     fn create_email_log(&self, new_log: NewEmailLog) -> Result<EmailLog, diesel::result::Error>;
     fn get_default_smtp_profile(&self, company_id: i64) -> Result<SmtpProfile, diesel::result::Error>;
+    fn update_email_log_status(&self, log_id: i64, status: &str) -> Result<EmailLog, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -422,5 +423,13 @@ impl UserRepository for UserRepositoryImpl {
             .filter(smtpprofiles::company_id.eq(company_id))
             .filter(smtpprofiles::is_default.eq(true))
             .first::<SmtpProfile>(&mut conn)
+    }
+
+    fn update_email_log_status(&self, log_id: i64, status: &str) -> Result<EmailLog, diesel::result::Error> {
+        log::debug!("Updating email log status for ID: {} to {}", log_id, status);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::update(emaillog::table.find(log_id))
+            .set(emaillog::status.eq(Some(status.to_string())))
+            .get_result::<EmailLog>(&mut conn)
     }
 }

@@ -44,3 +44,4 @@ class EmailStatus(EnumBase):
     FAILED = "Failed"
     SUCCESS = "Success"
     PENDING = "Pending"
+    QUEUED = "Queued"
