@@ -15,11 +15,12 @@ impl EmailService {
         smtp_server: &str,
         smtp_username: &str,
         smtp_password: &str,
+        smtp_port: u16,
     ) -> Result<AsyncSmtpTransport<Tokio1Executor>, Box<dyn std::error::Error + Send + Sync>> {
         let creds = Credentials::new(smtp_username.to_string(), smtp_password.to_string());
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(smtp_server)?
             .credentials(creds)
-            .port(587)
+            .port(smtp_port)
             .build();
         Ok(mailer)
     }
@@ -30,12 +31,14 @@ impl EmailService {
         smtp_username: &str,
         smtp_password: &str,
         from: &str,
+        smtp_port: Option<u16>,
         to: &str,
         subject: &str,
         content: &str,
         is_html: bool,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let mailer = Self::create_mailer(smtp_server, smtp_username, smtp_password)?;
+        let port = smtp_port.unwrap_or(587);
+        let mailer = Self::create_mailer(smtp_server, smtp_username, smtp_password, port)?;
 
         let content_type = if is_html {
             ContentType::TEXT_HTML

@@ -1,5 +1,5 @@
-use crate::models::users::{User, NewUser, Company, NewCompany, Industry, NewIndustry, ApiKey, NewApiKey, TeamMember, NewTeamMember, SmtpProfile, NewSmtpProfile};
-use crate::schema::{users, companies, industries, api_keys, team_members, smtpprofiles};
+use crate::models::users::{User, NewUser, Company, NewCompany, Industry, NewIndustry, ApiKey, NewApiKey, TeamMember, NewTeamMember, SmtpProfile, NewSmtpProfile, EmailLog, NewEmailLog};
+use crate::schema::{users, companies, industries, api_keys, team_members, smtpprofiles, emaillog};
 use diesel::prelude::*;
 use super::DbPool;
 
@@ -38,6 +38,9 @@ pub trait UserRepository {
     fn update_smtp_profile(&self, profile_id: i64, profile: &SmtpProfile) -> Result<SmtpProfile, diesel::result::Error>;
     fn delete_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<usize, diesel::result::Error>;
     fn set_default_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<SmtpProfile, diesel::result::Error>;
+    
+    fn create_email_log(&self, new_log: NewEmailLog) -> Result<EmailLog, diesel::result::Error>;
+    fn get_default_smtp_profile(&self, company_id: i64) -> Result<SmtpProfile, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -402,5 +405,22 @@ impl UserRepository for UserRepositoryImpl {
             smtpprofiles::updated_at.eq(chrono::Utc::now()),
         ))
         .get_result::<SmtpProfile>(&mut conn)
+    }
+
+    fn create_email_log(&self, new_log: NewEmailLog) -> Result<EmailLog, diesel::result::Error> {
+        log::debug!("Creating email log for company: {}", new_log.company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::insert_into(emaillog::table)
+            .values(&new_log)
+            .get_result::<EmailLog>(&mut conn)
+    }
+
+    fn get_default_smtp_profile(&self, company_id: i64) -> Result<SmtpProfile, diesel::result::Error> {
+        log::debug!("Fetching default SMTP profile for company: {}", company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        smtpprofiles::table
+            .filter(smtpprofiles::company_id.eq(company_id))
+            .filter(smtpprofiles::is_default.eq(true))
+            .first::<SmtpProfile>(&mut conn)
     }
 }

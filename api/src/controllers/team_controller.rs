@@ -114,6 +114,7 @@ impl TeamController {
                     &smtp_username,
                     &smtp_password,
                     "MailNow <noreply@mailnow.dev>",
+                    Some(587),
                     &email,
                     "Team Invitation - MailNow",
                     &html_content,

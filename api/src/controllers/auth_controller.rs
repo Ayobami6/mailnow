@@ -236,6 +236,7 @@ impl AuthController {
                     &smtp_username,
                     &smtp_password,
                     "MailNow <noreply@mailnow.dev>",
+                    Some(587),
                     &email,
                     "Verify Your Email Address - MailNow",
                     &html_content,
