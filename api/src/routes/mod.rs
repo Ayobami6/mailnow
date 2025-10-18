@@ -7,3 +7,4 @@ pub mod email_routes;
 pub mod onboarding_routes;
 pub mod team_routes;
 pub mod user_routes;
+pub mod smtp_routes;

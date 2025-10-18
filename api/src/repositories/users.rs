@@ -1,5 +1,5 @@
-use crate::models::users::{User, NewUser, Company, NewCompany, Industry, NewIndustry, ApiKey, NewApiKey, TeamMember, NewTeamMember};
-use crate::schema::{users, companies, industries, api_keys, team_members};
+use crate::models::users::{User, NewUser, Company, NewCompany, Industry, NewIndustry, ApiKey, NewApiKey, TeamMember, NewTeamMember, SmtpProfile, NewSmtpProfile};
+use crate::schema::{users, companies, industries, api_keys, team_members, smtpprofiles};
 use diesel::prelude::*;
 use super::DbPool;
 
@@ -31,6 +31,13 @@ pub trait UserRepository {
     fn update_company_credits(&self, company_id: i64, credits: i64) -> Result<Company, diesel::result::Error>;
     fn reset_company_credits(&self, company_id: i64, tier: &str) -> Result<Company, diesel::result::Error>;
     fn deduct_api_credit(&self, company_id: i64) -> Result<Company, diesel::result::Error>;
+    
+    fn create_smtp_profile(&self, new_profile: NewSmtpProfile) -> Result<SmtpProfile, diesel::result::Error>;
+    fn get_smtp_profiles_by_company(&self, company_id: i64) -> Result<Vec<SmtpProfile>, diesel::result::Error>;
+    fn get_smtp_profile_by_id(&self, profile_id: i64) -> Result<SmtpProfile, diesel::result::Error>;
+    fn update_smtp_profile(&self, profile_id: i64, profile: &SmtpProfile) -> Result<SmtpProfile, diesel::result::Error>;
+    fn delete_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<usize, diesel::result::Error>;
+    fn set_default_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<SmtpProfile, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -324,5 +331,76 @@ impl UserRepository for UserRepositoryImpl {
             .first::<TeamMember>(&mut conn)?;
         
         Ok(team_member.role)
+    }
+
+    fn create_smtp_profile(&self, new_profile: NewSmtpProfile) -> Result<SmtpProfile, diesel::result::Error> {
+        log::debug!("Creating SMTP profile for company: {}", new_profile.company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::insert_into(smtpprofiles::table)
+            .values(&new_profile)
+            .get_result::<SmtpProfile>(&mut conn)
+    }
+
+    fn get_smtp_profiles_by_company(&self, company_id: i64) -> Result<Vec<SmtpProfile>, diesel::result::Error> {
+        log::debug!("Fetching SMTP profiles for company: {}", company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        smtpprofiles::table
+            .filter(smtpprofiles::company_id.eq(company_id))
+            .load::<SmtpProfile>(&mut conn)
+    }
+
+    fn get_smtp_profile_by_id(&self, profile_id: i64) -> Result<SmtpProfile, diesel::result::Error> {
+        log::debug!("Fetching SMTP profile by ID: {}", profile_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        smtpprofiles::table.find(profile_id).first::<SmtpProfile>(&mut conn)
+    }
+
+    fn update_smtp_profile(&self, profile_id: i64, profile: &SmtpProfile) -> Result<SmtpProfile, diesel::result::Error> {
+        log::debug!("Updating SMTP profile: {}", profile_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::update(smtpprofiles::table.find(profile_id))
+            .set((
+                smtpprofiles::smtp_username.eq(&profile.smtp_username),
+                smtpprofiles::smtp_password.eq(&profile.smtp_password),
+                smtpprofiles::smtp_server.eq(&profile.smtp_server),
+                smtpprofiles::smtp_port.eq(profile.smtp_port),
+                smtpprofiles::is_default.eq(profile.is_default),
+                smtpprofiles::updated_at.eq(chrono::Utc::now()),
+            ))
+            .get_result::<SmtpProfile>(&mut conn)
+    }
+
+    fn delete_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<usize, diesel::result::Error> {
+        log::debug!("Deleting SMTP profile: {} for company: {}", profile_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::delete(
+            smtpprofiles::table
+                .filter(smtpprofiles::id.eq(profile_id))
+                .filter(smtpprofiles::company_id.eq(company_id))
+        ).execute(&mut conn)
+    }
+
+    fn set_default_smtp_profile(&self, profile_id: i64, company_id: i64) -> Result<SmtpProfile, diesel::result::Error> {
+        log::debug!("Setting default SMTP profile: {} for company: {}", profile_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        
+        // First, unset all defaults for the company
+        diesel::update(
+            smtpprofiles::table.filter(smtpprofiles::company_id.eq(company_id))
+        )
+        .set(smtpprofiles::is_default.eq(false))
+        .execute(&mut conn)?;
+        
+        // Then set the specified profile as default
+        diesel::update(
+            smtpprofiles::table
+                .filter(smtpprofiles::id.eq(profile_id))
+                .filter(smtpprofiles::company_id.eq(company_id))
+        )
+        .set((
+            smtpprofiles::is_default.eq(true),
+            smtpprofiles::updated_at.eq(chrono::Utc::now()),
+        ))
+        .get_result::<SmtpProfile>(&mut conn)
     }
 }
