@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::utils::utils::service_response;
 use crate::errors::AppError;
 use crate::repositories::users::UserRepository;
+use crate::auth::jwt::Claims;
 
 #[derive(Serialize)]
 pub struct DashboardStats {
@@ -33,25 +34,34 @@ pub struct DashboardController;
 
 impl DashboardController {
     pub async fn get_stats(
-        company_id: web::Path<i64>,
+        claims: web::ReqData<Claims>,
         repo_factory: web::Data<crate::repositories::RepositoryFactory>,
     ) -> Result<HttpResponse, AppError> {
-        use crate::middleware::credits::check_and_reset_credits;
-        
-        let company_id = company_id.into_inner();
-        
-        // Check and reset credits if needed
-        check_and_reset_credits(company_id, &repo_factory).await?;
-        
         let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+        
         let company = user_repo.get_company_by_id(company_id)
             .map_err(|e| AppError::Database(e))?;
         
+        // Get email statistics from email logs
+        let (total_emails, sent_emails, _queued, _failed) = user_repo.get_email_log_stats(company_id)?;
+        let delivery_rate = if total_emails > 0 {
+            ((sent_emails as f64 / total_emails as f64) * 100.0 * 100.0).round() / 100.0
+        } else {
+            0.0
+        };
+        
         let stats = DashboardStats {
-            emails_sent: 12847,
-            delivery_rate: 98.2,
-            api_calls: 45231,
-            active_users: 2847,
+            emails_sent: sent_emails,
+            delivery_rate,
+            api_calls: total_emails, // Total API calls = total emails attempted
+            active_users: 1, // Current user count (could be enhanced to count team members)
             api_credits_remaining: company.api_credits,
             pricing_tier: company.pricing_tier,
             credits_reset_date: company.credits_reset_date.format("%Y-%m-%d").to_string(),
@@ -65,29 +75,37 @@ impl DashboardController {
         ))
     }
 
-    pub async fn get_recent_activity() -> Result<HttpResponse, AppError> {
-        let activities = vec![
+    pub async fn get_recent_activity(
+        claims: web::ReqData<Claims>,
+        repo_factory: web::Data<crate::repositories::RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        // Get recent email logs (limit to 5 most recent)
+        let email_logs = user_repo.get_email_logs_by_company(company_id)?;
+        let activities: Vec<RecentActivity> = email_logs.into_iter().take(5).map(|log| {
+            let time_diff = chrono::Utc::now().signed_duration_since(log.created_at);
+            let time_str = if time_diff.num_minutes() < 60 {
+                format!("{} minutes ago", time_diff.num_minutes().max(1))
+            } else if time_diff.num_hours() < 24 {
+                format!("{} hours ago", time_diff.num_hours())
+            } else {
+                format!("{} days ago", time_diff.num_days())
+            };
+            
             RecentActivity {
-                status: "delivered".to_string(),
-                email: "user@example.com".to_string(),
-                time: "2 minutes ago".to_string(),
-            },
-            RecentActivity {
-                status: "opened".to_string(),
-                email: "customer@company.com".to_string(),
-                time: "5 minutes ago".to_string(),
-            },
-            RecentActivity {
-                status: "clicked".to_string(),
-                email: "admin@startup.io".to_string(),
-                time: "8 minutes ago".to_string(),
-            },
-            RecentActivity {
-                status: "bounced".to_string(),
-                email: "invalid@domain.com".to_string(),
-                time: "12 minutes ago".to_string(),
-            },
-        ];
+                status: log.status.unwrap_or("unknown".to_string()).to_lowercase(),
+                email: log.to_email,
+                time: time_str,
+            }
+        }).collect();
 
         Ok(service_response(
             200,
