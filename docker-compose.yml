@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3200:3200"
+    env_file:
+      - ./api/.env
+    command: ["./api"]
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./admin/.env
+
+    command: ["python", "manage.py", "runserver", ]
+
+  frontend:
+    build:
+      context: ./mailing-fro
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    depends_on:
+      - api
+    command: ["node", "server.js"]
+
+volumes:
+  postgres_data:
