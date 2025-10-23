@@ -1,4 +1,4 @@
-use crate::schema::{api_keys, companies, industries, team_members, users, smtpprofiles, emaillog};
+use crate::schema::{api_keys, companies, industries, team_members, users, smtpprofiles, emaillog, templates};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -188,4 +188,30 @@ pub struct NewEmailLog {
     pub status: Option<String>,
     pub created_at: DateTime<Utc>,
     pub company_id: i64,
+}
+
+#[derive(Debug, Queryable, Identifiable, Associations, Serialize, Deserialize)]
+#[diesel(table_name = templates)]
+#[diesel(belongs_to(Company, foreign_key = company_id))]
+pub struct Template {
+    pub id: i64,
+    pub company_id: i64,
+    pub name: String,
+    pub subject: String,
+    pub content: String,
+    pub template_type: String,
+    pub date_created: DateTime<Utc>,
+    pub date_updated: DateTime<Utc>,
+}
+
+#[derive(Debug, Insertable)]
+#[diesel(table_name = templates)]
+pub struct NewTemplate {
+    pub company_id: i64,
+    pub name: String,
+    pub subject: String,
+    pub content: String,
+    pub template_type: String,
+    pub date_created: DateTime<Utc>,
+    pub date_updated: DateTime<Utc>,
 }

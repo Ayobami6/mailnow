@@ -14,6 +14,7 @@ pub struct SendEmailRequest {
     pub subject: String,
     pub html: Option<String>,
     pub text: Option<String>,
+    pub template_id: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -62,13 +63,20 @@ impl PublicEmailController {
         // Deduct API credit
         user_repo.deduct_api_credit(company.id)?;
 
-        // Prepare email content
-        let empty_string = String::new();
-        let content = email_req
-            .html
-            .as_ref()
-            .unwrap_or(email_req.text.as_ref().unwrap_or(&empty_string));
-        let is_html = email_req.html.is_some();
+        // Prepare email content (check for template first)
+        let (content, subject, is_html) = if let Some(template_id) = email_req.template_id {
+            let template = user_repo.get_template_by_id(template_id, company.id)
+                .map_err(|_| AppError::Validation("Template not found".to_string()))?;
+            
+            (template.content, template.subject, true)
+        } else {
+            let empty_string = String::new();
+            let content = email_req
+                .html
+                .as_ref()
+                .unwrap_or(email_req.text.as_ref().unwrap_or(&empty_string));
+            (content.clone(), email_req.subject.clone(), email_req.html.is_some())
+        };
 
         // Generate message ID
         let message_id = format!("msg_{}", Uuid::new_v4().simple());
@@ -77,7 +85,7 @@ impl PublicEmailController {
         let new_log = NewEmailLog {
             from_email: email_req.from.clone(),
             to_email: email_req.to.clone(),
-            subject: email_req.subject.clone(),
+            subject: subject.clone(),
             body: content.clone(),
             status: Some("Queued".to_string()),
             created_at: chrono::Utc::now(),
@@ -93,7 +101,7 @@ impl PublicEmailController {
         let smtp_port = smtp_profile.smtp_port;
         let from_email = email_req.from.clone();
         let to_email = email_req.to.clone();
-        let subject = email_req.subject.clone();
+        let email_subject = subject.clone();
         let email_content = content.clone();
         let log_id = email_log.id;
         let repo_factory_clone = repo_factory.clone();
@@ -110,7 +118,7 @@ impl PublicEmailController {
                     &from_email,
                     Some(smtp_port as u16),
                     &to_email,
-                    &subject,
+                    &email_subject,
                     &email_content,
                     is_html,
                 )

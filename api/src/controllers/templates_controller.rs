@@ -1,19 +1,20 @@
 use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::utils::utils::service_response;
 use crate::errors::AppError;
+use crate::auth::jwt::Claims;
+use crate::repositories::{users::UserRepository, RepositoryFactory};
+use crate::models::users::{NewTemplate, Template};
 
 #[derive(Serialize)]
-pub struct EmailTemplate {
-    pub id: String,
+pub struct TemplateResponse {
+    pub id: i64,
     pub name: String,
     pub subject: String,
     pub template_type: String,
-    pub content: Option<String>,
-    pub last_modified: String,
-    pub usage: i64,
-    pub status: String,
+    pub content: String,
+    pub date_created: String,
+    pub date_updated: String,
 }
 
 #[derive(Serialize)]
@@ -43,35 +44,37 @@ pub struct UpdateTemplateRequest {
 pub struct TemplatesController;
 
 impl TemplatesController {
-    pub async fn get_templates() -> Result<HttpResponse, AppError> {
-        let templates = vec![
-            EmailTemplate {
-                id: "1".to_string(),
-                name: "Welcome Email".to_string(),
-                subject: "Welcome to {{company_name}}!".to_string(),
-                template_type: "Transactional".to_string(),
-                content: Some("<h1>Welcome!</h1><p>Thanks for joining us.</p>".to_string()),
-                last_modified: "2 days ago".to_string(),
-                usage: 1247,
-                status: "active".to_string(),
-            },
-            EmailTemplate {
-                id: "2".to_string(),
-                name: "Password Reset".to_string(),
-                subject: "Reset your password".to_string(),
-                template_type: "Transactional".to_string(),
-                content: Some("<h1>Password Reset</h1><p>Click the link to reset.</p>".to_string()),
-                last_modified: "1 week ago".to_string(),
-                usage: 89,
-                status: "active".to_string(),
-            },
-        ];
+    pub async fn get_templates(
+        claims: web::ReqData<Claims>,
+        repo_factory: web::Data<RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        let templates = user_repo.get_templates_by_company(company_id)?;
+        let response_templates: Vec<TemplateResponse> = templates.into_iter().map(|template| {
+            TemplateResponse {
+                id: template.id,
+                name: template.name,
+                subject: template.subject,
+                template_type: template.template_type,
+                content: template.content,
+                date_created: template.date_created.format("%Y-%m-%d %H:%M").to_string(),
+                date_updated: template.date_updated.format("%Y-%m-%d %H:%M").to_string(),
+            }
+        }).collect();
 
         Ok(service_response(
             200,
             "Templates retrieved successfully",
             true,
-            Some(serde_json::to_value(templates).unwrap()),
+            Some(serde_json::to_value(response_templates).unwrap()),
         ))
     }
 
@@ -91,55 +94,90 @@ impl TemplatesController {
         ))
     }
 
-    pub async fn create_template(req: web::Json<CreateTemplateRequest>) -> Result<HttpResponse, AppError> {
+    pub async fn create_template(
+        claims: web::ReqData<Claims>,
+        req: web::Json<CreateTemplateRequest>,
+        repo_factory: web::Data<RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
         if req.name.is_empty() || req.subject.is_empty() {
             return Err(AppError::Validation("Template name and subject are required".to_string()));
         }
 
-        let new_template = EmailTemplate {
-            id: Uuid::new_v4().to_string(),
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        let new_template = NewTemplate {
+            company_id,
             name: req.name.clone(),
             subject: req.subject.clone(),
+            content: req.content.clone(),
             template_type: req.template_type.clone(),
-            content: Some(req.content.clone()),
-            last_modified: "Just now".to_string(),
-            usage: 0,
-            status: "active".to_string(),
+            date_created: chrono::Utc::now(),
+            date_updated: chrono::Utc::now(),
+        };
+
+        let created_template = user_repo.create_template(new_template)?;
+        let response = TemplateResponse {
+            id: created_template.id,
+            name: created_template.name,
+            subject: created_template.subject,
+            template_type: created_template.template_type,
+            content: created_template.content,
+            date_created: created_template.date_created.format("%Y-%m-%d %H:%M").to_string(),
+            date_updated: created_template.date_updated.format("%Y-%m-%d %H:%M").to_string(),
         };
 
         Ok(service_response(
             201,
             "Template created successfully",
             true,
-            Some(serde_json::to_value(new_template).unwrap()),
+            Some(serde_json::to_value(response).unwrap()),
         ))
     }
 
-    pub async fn get_template(path: web::Path<String>) -> Result<HttpResponse, AppError> {
+    pub async fn get_template(
+        path: web::Path<i64>,
+        claims: web::ReqData<Claims>,
+        repo_factory: web::Data<RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
         let template_id = path.into_inner();
-        
-        let template = EmailTemplate {
-            id: template_id,
-            name: "Welcome Email".to_string(),
-            subject: "Welcome to {{company_name}}!".to_string(),
-            template_type: "Transactional".to_string(),
-            content: Some("<h1>Welcome!</h1><p>Thanks for joining us.</p>".to_string()),
-            last_modified: "2 days ago".to_string(),
-            usage: 1247,
-            status: "active".to_string(),
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        let template = user_repo.get_template_by_id(template_id, company_id)?;
+        let response = TemplateResponse {
+            id: template.id,
+            name: template.name,
+            subject: template.subject,
+            template_type: template.template_type,
+            content: template.content,
+            date_created: template.date_created.format("%Y-%m-%d %H:%M").to_string(),
+            date_updated: template.date_updated.format("%Y-%m-%d %H:%M").to_string(),
         };
 
         Ok(service_response(
             200,
             "Template retrieved successfully",
             true,
-            Some(serde_json::to_value(template).unwrap()),
+            Some(serde_json::to_value(response).unwrap()),
         ))
     }
 
     pub async fn update_template(
-        path: web::Path<String>,
-        req: web::Json<UpdateTemplateRequest>,
+        path: web::Path<i64>,
+        _req: web::Json<UpdateTemplateRequest>,
     ) -> Result<HttpResponse, AppError> {
         let _template_id = path.into_inner();
 
@@ -151,8 +189,22 @@ impl TemplatesController {
         ))
     }
 
-    pub async fn delete_template(path: web::Path<String>) -> Result<HttpResponse, AppError> {
-        let _template_id = path.into_inner();
+    pub async fn delete_template(
+        path: web::Path<i64>,
+        claims: web::ReqData<Claims>,
+        repo_factory: web::Data<RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
+        let template_id = path.into_inner();
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        user_repo.delete_template(template_id, company_id)?;
 
         Ok(service_response(
             200,

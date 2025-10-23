@@ -1,9 +1,9 @@
 use super::DbPool;
 use crate::models::users::{
     ApiKey, Company, EmailLog, Industry, NewApiKey, NewCompany, NewEmailLog, NewIndustry,
-    NewSmtpProfile, NewTeamMember, NewUser, SmtpProfile, TeamMember, User,
+    NewSmtpProfile, NewTeamMember, NewUser, SmtpProfile, TeamMember, User, Template, NewTemplate,
 };
-use crate::schema::{api_keys, companies, emaillog, industries, smtpprofiles, team_members, users};
+use crate::schema::{api_keys, companies, emaillog, industries, smtpprofiles, team_members, users, templates};
 use diesel::prelude::*;
 
 pub trait UserRepository {
@@ -108,6 +108,12 @@ pub trait UserRepository {
         &self,
         company_id: i64,
     ) -> Result<(i64, i64, i64, i64), diesel::result::Error>;
+    
+    fn create_template(&self, new_template: NewTemplate) -> Result<Template, diesel::result::Error>;
+    fn get_templates_by_company(&self, company_id: i64) -> Result<Vec<Template>, diesel::result::Error>;
+    fn get_template_by_id(&self, template_id: i64, company_id: i64) -> Result<Template, diesel::result::Error>;
+    fn update_template(&self, template_id: i64, template: &Template) -> Result<Template, diesel::result::Error>;
+    fn delete_template(&self, template_id: i64, company_id: i64) -> Result<usize, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -648,5 +654,55 @@ impl UserRepository for UserRepositoryImpl {
             .get_result(&mut conn)?;
 
         Ok((total, sent, queued, failed))
+    }
+
+    fn create_template(&self, new_template: NewTemplate) -> Result<Template, diesel::result::Error> {
+        log::debug!("Creating template: {} for company: {}", new_template.name, new_template.company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::insert_into(templates::table)
+            .values(&new_template)
+            .get_result::<Template>(&mut conn)
+    }
+
+    fn get_templates_by_company(&self, company_id: i64) -> Result<Vec<Template>, diesel::result::Error> {
+        log::debug!("Fetching templates for company: {}", company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        templates::table
+            .filter(templates::company_id.eq(company_id))
+            .order(templates::date_created.desc())
+            .load::<Template>(&mut conn)
+    }
+
+    fn get_template_by_id(&self, template_id: i64, company_id: i64) -> Result<Template, diesel::result::Error> {
+        log::debug!("Fetching template by ID: {} for company: {}", template_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        templates::table
+            .filter(templates::id.eq(template_id))
+            .filter(templates::company_id.eq(company_id))
+            .first::<Template>(&mut conn)
+    }
+
+    fn update_template(&self, template_id: i64, template: &Template) -> Result<Template, diesel::result::Error> {
+        log::debug!("Updating template: {}", template_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::update(templates::table.find(template_id))
+            .set((
+                templates::name.eq(&template.name),
+                templates::subject.eq(&template.subject),
+                templates::content.eq(&template.content),
+                templates::template_type.eq(&template.template_type),
+                templates::date_updated.eq(chrono::Utc::now()),
+            ))
+            .get_result::<Template>(&mut conn)
+    }
+
+    fn delete_template(&self, template_id: i64, company_id: i64) -> Result<usize, diesel::result::Error> {
+        log::debug!("Deleting template: {} for company: {}", template_id, company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::delete(
+            templates::table
+                .filter(templates::id.eq(template_id))
+                .filter(templates::company_id.eq(company_id))
+        ).execute(&mut conn)
     }
 }
