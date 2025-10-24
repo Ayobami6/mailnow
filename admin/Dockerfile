@@ -11,7 +11,7 @@ RUN rm -rf .env
 # install dependencies
 RUN apk add --virtual .build-deps gcc musl-dev \
     && pip install --no-cache-dir -r requirements.txt --no-deps \
-    && apk del .build-deps && pip install --upgrade --force-reinstall xhtml2pdf[all] 
+    && apk del .build-deps
 
 
 EXPOSE 8000 
