@@ -22,7 +22,6 @@ services:
       - ./admin/.env
 
     restart: always
-    network_mode: host
     volumes:
       - .:/app
     command: sh -c "python manage.py runserver 0.0.0.0:8000"
