@@ -35,7 +35,7 @@ DEBUG = get_env("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = get_env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
-
+CSRF_TRUSTED_ORIGINS = get_env("CSRF_TRUSTED_ORIGINS", "http://localhost").split(",")
 # Application definition
 
 INSTALLED_APPS = [
