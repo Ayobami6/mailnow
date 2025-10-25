@@ -26,8 +26,8 @@ impl PricingTier {
 
     pub fn monthly_credits(&self) -> i64 {
         match self {
-            PricingTier::Free => 20_000,
-            PricingTier::Developer => 100_000,
+            PricingTier::Free => 1_000,
+            PricingTier::Developer => 10_000,
             PricingTier::Enterprise => -1, // Unlimited
         }
     }
