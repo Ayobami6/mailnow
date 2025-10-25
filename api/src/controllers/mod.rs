@@ -9,3 +9,4 @@ pub mod team_controller;
 pub mod user_controller;
 pub mod smtp_controller;
 pub mod public_email_controller;
+pub mod settings_controller;

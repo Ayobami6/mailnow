@@ -126,6 +126,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::user_routes::register_user_routes)
             .configure(routes::smtp_routes::register_smtp_routes)
             .configure(routes::public_email_routes::register_public_email_routes)
+            .configure(routes::settings_routes::register_settings_routes)
     })
     .bind(("0.0.0.0", port))?
     .run()

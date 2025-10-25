@@ -114,6 +114,7 @@ pub trait UserRepository {
     fn get_template_by_id(&self, template_id: i64, company_id: i64) -> Result<Template, diesel::result::Error>;
     fn update_template(&self, template_id: i64, template: &Template) -> Result<Template, diesel::result::Error>;
     fn delete_template(&self, template_id: i64, company_id: i64) -> Result<usize, diesel::result::Error>;
+    fn update_company(&self, company_id: i64, company: &Company) -> Result<Company, diesel::result::Error>;
 }
 
 #[derive(Clone)]
@@ -704,5 +705,19 @@ impl UserRepository for UserRepositoryImpl {
                 .filter(templates::id.eq(template_id))
                 .filter(templates::company_id.eq(company_id))
         ).execute(&mut conn)
+    }
+
+    fn update_company(&self, company_id: i64, company: &Company) -> Result<Company, diesel::result::Error> {
+        log::debug!("Updating company: {}", company_id);
+        let mut conn = self.pool.get().expect("Failed to get DB connection");
+        diesel::update(companies::table.find(company_id))
+            .set((
+                companies::company_name.eq(&company.company_name),
+                companies::website.eq(&company.website),
+                companies::company_address.eq(&company.company_address),
+                companies::default_from_email.eq(&company.default_from_email),
+                companies::default_from_name.eq(&company.default_from_name),
+            ))
+            .get_result::<Company>(&mut conn)
     }
 }
