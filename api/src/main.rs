@@ -8,8 +8,8 @@ mod models;
 mod repositories;
 mod routes;
 mod schema;
-mod utils;
 mod services;
+mod utils;
 
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, web, App, HttpServer, Responder};
@@ -127,7 +127,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::smtp_routes::register_smtp_routes)
             .configure(routes::public_email_routes::register_public_email_routes)
     })
-    .bind(("127.0.0.1", port))?
+    .bind(("0.0.0.0", port))?
     .run()
     .await
 }
