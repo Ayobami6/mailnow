@@ -9,3 +9,4 @@ pub mod team_routes;
 pub mod user_routes;
 pub mod smtp_routes;
 pub mod public_email_routes;
+pub mod settings_routes;
