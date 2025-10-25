@@ -8,6 +8,7 @@ pub fn register_settings_routes(cfg: &mut ServiceConfig) {
     cfg.service(
         web::scope("/settings")
             .wrap(auth)
+            .route("/company", web::get().to(SettingsController::get_company_profile))
             .route("/company", web::put().to(SettingsController::update_company_profile))
             .route("/password", web::put().to(SettingsController::change_password)),
     );

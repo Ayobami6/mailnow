@@ -25,6 +25,29 @@ pub struct ChangePasswordRequest {
 pub struct SettingsController;
 
 impl SettingsController {
+    pub async fn get_company_profile(
+        claims: web::ReqData<Claims>,
+        repo_factory: web::Data<RepositoryFactory>,
+    ) -> Result<HttpResponse, AppError> {
+        let user_repo = repo_factory.create_user_repository();
+        let user_id = claims.into_inner().user_id;
+
+        // Get user's company through team membership
+        let team_members = user_repo.get_team_members_by_user(user_id)?;
+        let company_id = team_members.first()
+            .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
+            .company_id;
+
+        let company = user_repo.get_company_by_id(company_id)?;
+
+        Ok(service_response(
+            200,
+            "Company profile retrieved successfully",
+            true,
+            Some(serde_json::to_value(company).unwrap()),
+        ))
+    }
+
     pub async fn update_company_profile(
         claims: web::ReqData<Claims>,
         req: web::Json<UpdateCompanyRequest>,
@@ -39,8 +62,13 @@ impl SettingsController {
             .ok_or_else(|| AppError::Validation("User not associated with any company".to_string()))?
             .company_id;
 
-        // Get current company data
+        // Get current company data and check if user is owner
         let mut company = user_repo.get_company_by_id(company_id)?;
+        
+        // Only allow company owner to update profile
+        if company.owner_id != user_id {
+            return Err(AppError::Validation("Only company owner can update profile".to_string()));
+        }
         
         // Update company fields
         company.company_name = req.company_name.clone();
