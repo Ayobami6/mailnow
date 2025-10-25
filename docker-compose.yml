@@ -12,7 +12,7 @@ services:
       - ./api/.env
     volumes:
       - ./api:/app
-    command: ["./api"]
+    command: "./api"
 
   admin:
     build:
