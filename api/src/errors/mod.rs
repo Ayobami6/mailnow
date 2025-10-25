@@ -1,5 +1,6 @@
 use crate::utils::utils::service_response;
 use actix_web::{HttpResponse, ResponseError};
+use redis::Msg;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,6 +19,9 @@ pub enum AppError {
 
     #[error("Authentication failed")]
     Unauthorized,
+
+    #[error("Authentication failed")]
+    Forbidden(String),
 
     #[error("User not found")]
     UserNotFound,
@@ -53,6 +57,10 @@ impl ResponseError for AppError {
             AppError::Unauthorized => {
                 log::warn!("Unauthorized access attempt");
                 service_response(401, "Authentication failed", false, None)
+            }
+            AppError::Forbidden(msg) => {
+                log::warn!("Forbidden access attempt: {}", msg);
+                service_response(403, msg, false, None)
             }
             AppError::UserNotFound => {
                 log::warn!("User not found");
