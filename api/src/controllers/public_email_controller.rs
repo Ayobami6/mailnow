@@ -36,7 +36,7 @@ impl PublicEmailController {
             .headers()
             .get("X-API-Key")
             .and_then(|h| h.to_str().ok())
-            .ok_or_else(|| AppError::Validation("Missing X-API-Key header".to_string()))?;
+            .ok_or_else(|| AppError::Forbidden("Missing X-API-Key header".to_string()))?;
 
         let user_repo = repo_factory.create_user_repository();
 
@@ -65,9 +65,10 @@ impl PublicEmailController {
 
         // Prepare email content (check for template first)
         let (content, subject, is_html) = if let Some(template_id) = email_req.template_id {
-            let template = user_repo.get_template_by_id(template_id, company.id)
+            let template = user_repo
+                .get_template_by_id(template_id, company.id)
                 .map_err(|_| AppError::Validation("Template not found".to_string()))?;
-            
+
             (template.content, template.subject, true)
         } else {
             let empty_string = String::new();
@@ -75,7 +76,11 @@ impl PublicEmailController {
                 .html
                 .as_ref()
                 .unwrap_or(email_req.text.as_ref().unwrap_or(&empty_string));
-            (content.clone(), email_req.subject.clone(), email_req.html.is_some())
+            (
+                content.clone(),
+                email_req.subject.clone(),
+                email_req.html.is_some(),
+            )
         };
 
         // Generate message ID
