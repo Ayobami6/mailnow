@@ -142,20 +142,27 @@ impl AuthController {
                 _ => AppError::Database(e),
             })?;
 
-        log::debug!("User found: {}, password hash length: {}", user.email, user.password.len());
-        
+        log::debug!(
+            "User found: {}, password hash length: {}",
+            user.email,
+            user.password.len()
+        );
+
         // Check if password hash is in correct format
         if user.password.is_empty() || !user.password.starts_with("$argon2") {
             log::error!("Invalid password hash format for user: {}", user.email);
             return Err(AppError::Unauthorized);
         }
-        
+
         let argon2 = Argon2::default();
-        let parsed_hash = PasswordHash::new(&user.password)
-            .map_err(|e| {
-                log::error!("Failed to parse password hash for user {}: {}", user.email, e);
-                AppError::Unauthorized
-            })?;
+        let parsed_hash = PasswordHash::new(&user.password).map_err(|e| {
+            log::error!(
+                "Failed to parse password hash for user {}: {}",
+                user.email,
+                e
+            );
+            AppError::Unauthorized
+        })?;
 
         argon2
             .verify_password(req.password.as_bytes(), &parsed_hash)
@@ -191,7 +198,7 @@ impl AuthController {
         }
 
         let token = generate_verification_token();
-        let verification_link = format!("http://localhost:3000/verify-email?token={}", token);
+        let verification_link = format!("https://mailnow.xyz/verify-email?token={}", token);
 
         // Get user ID first
         let user_repo = repo_factory.create_user_repository();
