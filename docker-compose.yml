@@ -22,7 +22,4 @@ services:
       - ./admin/.env
 
     restart: always
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: sh -c "python manage.py makemigration && pyhon manage.py migrate && python manage.py runserver"
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
